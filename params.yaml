@@ -1,0 +1,19 @@
+data:
+  username: "bonc_1"
+  max_months: 3
+  time_control: "600"
+
+blunder:
+  cp_drop_threshold: 150
+  win_prob_drop_threshold: 0.20
+
+train:
+  epochs: 5
+  batch_size: 8
+  lr: 0.001
+  embedding_dim: 128
+  hidden_dim: 256
+
+gate:
+  max_latency_ms: 150.0
+  min_legality_pct: 100.0

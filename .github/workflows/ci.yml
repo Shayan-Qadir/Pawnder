@@ -1,0 +1,51 @@
+name: Pawnder MLOps CI/CD
+
+on:
+  push:
+    branches: [ main, shayan-dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test_and_gate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: Install System Dependencies (Stockfish)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y stockfish
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Unit & Integration Tests
+      run: |
+        pytest -v tests/test_game_parser.py tests/test_blunder_detector.py tests/test_models.py tests/test_api.py
+
+    - name: Strict Model Quality Gate Assertion
+      run: |
+        pytest -v tests/test_model_gate.py
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        cache-dependency-path: frontend/package.json
+
+    - name: Frontend Build & Lint
+      run: |
+        cd frontend
+        npm install
+        npm run build

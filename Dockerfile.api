@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+# Install system dependencies & Stockfish
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    stockfish \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy dependency requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code and configuration
+COPY src/ ./src/
+COPY data/ ./data/
+COPY models_saved/ ./models_saved/
+COPY params.yaml .
+COPY pytest.ini .
+
+ENV STOCKFISH_PATH=/usr/games/stockfish
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

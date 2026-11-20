@@ -1,0 +1,49 @@
+stages:
+  ingest:
+    cmd: python -m src.data.chess_com_client
+    deps:
+      - src/data/chess_com_client.py
+    params:
+      - data.username
+      - data.max_months
+    outs:
+      - data/raw/bonc_1_games.json:
+          cache: true
+
+  extract_targets:
+    cmd: python -m src.data.blunder_detector
+    deps:
+      - src/data/blunder_detector.py
+      - src/data/game_parser.py
+      - data/raw/bonc_1_games.json
+    params:
+      - blunder.cp_drop_threshold
+      - blunder.win_prob_drop_threshold
+    outs:
+      - data/candidate_bank/legal_positions.json:
+          cache: true
+
+  train:
+    cmd: python -m src.training.train
+    deps:
+      - src/models/board_encoder.py
+      - src/models/history_gru.py
+      - src/models/scenario_network.py
+      - src/training/dataset.py
+      - data/candidate_bank/legal_positions.json
+    params:
+      - train.epochs
+      - train.batch_size
+      - train.lr
+    outs:
+      - models_saved/scenario_model.pt:
+          cache: true
+
+  evaluate:
+    cmd: python -m src.training.evaluate
+    deps:
+      - models_saved/scenario_model.pt
+      - src/training/evaluate.py
+    metrics:
+      - metrics.json:
+          cache: false
