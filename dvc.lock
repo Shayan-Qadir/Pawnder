@@ -1,0 +1,91 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python -m src.data.chess_com_client
+    deps:
+    - path: src/data/chess_com_client.py
+      hash: md5
+      md5: abcf7385d4a4074ec73ddd70be82f679
+      size: 2975
+    params:
+      params.yaml:
+        data.max_months: 3
+        data.username: bonc_1
+    outs:
+    - path: data/raw/bonc_1_games.json
+      hash: md5
+      md5: ea7878925ffd88cf003805f7465bfdae
+      size: 135773
+  extract_targets:
+    cmd: python -m src.data.blunder_detector
+    deps:
+    - path: data/raw/bonc_1_games.json
+      hash: md5
+      md5: ea7878925ffd88cf003805f7465bfdae
+      size: 135773
+    - path: src/data/blunder_detector.py
+      hash: md5
+      md5: ac23a18a64adfd0a9da869cf745fbf3e
+      size: 6008
+    - path: src/data/game_parser.py
+      hash: md5
+      md5: 7450a1a92551384096554675ca456768
+      size: 4907
+    params:
+      params.yaml:
+        blunder.cp_drop_threshold: 150
+        blunder.win_prob_drop_threshold: 0.2
+    outs:
+    - path: data/candidate_bank/legal_positions.json
+      hash: md5
+      md5: 88301538052d2e93e07cf1ae37d9e99e
+      size: 450
+  train:
+    cmd: python -m src.training.train
+    deps:
+    - path: data/candidate_bank/legal_positions.json
+      hash: md5
+      md5: 88301538052d2e93e07cf1ae37d9e99e
+      size: 450
+    - path: src/models/board_encoder.py
+      hash: md5
+      md5: 332c9d21b919de2f54aafd5ae0c0c81e
+      size: 2621
+    - path: src/models/history_gru.py
+      hash: md5
+      md5: 8ee2fd51f52e0a11f49b7a12a3dcd203
+      size: 1256
+    - path: src/models/scenario_network.py
+      hash: md5
+      md5: 9ff7bcbb2c47664e358701082f7902cd
+      size: 2904
+    - path: src/training/dataset.py
+      hash: md5
+      md5: a9bd2ab56e1fa0b3a6333b45b2ef9ce8
+      size: 5610
+    params:
+      params.yaml:
+        train.batch_size: 8
+        train.epochs: 5
+        train.lr: 0.001
+    outs:
+    - path: models_saved/scenario_model.pt
+      hash: md5
+      md5: b09fd3e186d27254050f91eab16851e5
+      size: 3772985
+  evaluate:
+    cmd: python -m src.training.evaluate
+    deps:
+    - path: models_saved/scenario_model.pt
+      hash: md5
+      md5: b09fd3e186d27254050f91eab16851e5
+      size: 3772985
+    - path: src/training/evaluate.py
+      hash: md5
+      md5: de838899dba99c9d11c8aa26f9ef209c
+      size: 3927
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: fd05af90ec14bbafd952043faa340db3
+      size: 170

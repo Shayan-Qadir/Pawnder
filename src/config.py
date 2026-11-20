@@ -27,6 +27,13 @@ class Settings(BaseModel):
     DEFAULT_ENGINE_DEPTH: int = 12
     DEFAULT_BLUNDER_THRESHOLD_CP: int = 150
     DEFAULT_WIN_PROB_DROP_THRESHOLD: float = 0.20
+
+    # DagsHub & MLflow tracking
+    DAGSHUB_REPO_OWNER: str = "Shayan-Qadir"
+    DAGSHUB_REPO_NAME: str = "Pawnder"
+    MLFLOW_TRACKING_URI: str = os.getenv(
+        "MLFLOW_TRACKING_URI", "https://dagshub.com/Shayan-Qadir/Pawnder.mlflow"
+    )
     
     # Model parameters
     BOARD_CHANNELS: int = 14  # 6 white pieces, 6 black pieces, active color, castling/rights
