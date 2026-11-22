@@ -39,7 +39,8 @@ Chess.com users, the ranker picked a drill from the same failure category as
 later real blunders **97.4%** of the time (vs 71–79% for random/recent/hand-rule
 baselines), with board similarity **0.984 vs 0.865 random**. No A/B test was
 run, so we do not claim rating improvement. Full method, numbers, and limits:
-[`MODEL_JUSTIFICATION.md`](MODEL_JUSTIFICATION.md).
+[`MODEL_JUSTIFICATION.md`](MODEL_JUSTIFICATION.md). For the picture version with
+graphs, see [`MODEL_EXPLAINED.md`](MODEL_EXPLAINED.md).
 
 ---
 

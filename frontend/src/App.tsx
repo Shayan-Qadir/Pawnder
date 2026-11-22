@@ -94,9 +94,11 @@ export function App() {
       if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
+        clearMoveAnimation();
         stepBack();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
+        clearMoveAnimation();
         stepForward();
       }
     };
@@ -182,7 +184,23 @@ export function App() {
   };
 
   const handleMove = async (moveUci: string) => {
-    if (!isGameActive || isViewingHistory) return;
+    if (!isGameActive) return;
+
+    // If the user moved after stepping back with ←, treat the viewed position
+    // as the new live position and branch from there ("play the move again").
+    const replayIndex = isViewingHistory && safeIndex !== null ? safeIndex : null;
+    const sourceFen = replayIndex !== null ? positions[replayIndex].fen : currentFen;
+    if (replayIndex !== null) {
+      clearMoveAnimation();
+      setCurrentFen(sourceFen);
+      setPositions((prev) => prev.slice(0, replayIndex + 1));
+      setViewIndex(null);
+      setIsPlayerTurn(true);
+      setPlayerClock(scenario?.clock_remaining ?? 65);
+      setEngineClock(scenario?.clock_remaining ?? 65);
+      setClockEpoch((n) => n + 1);
+      setGameStatus('Replaying from this position — make your move.');
+    }
 
     setIsPlayerTurn(false);
     setIsMoving(true);
@@ -191,7 +209,7 @@ export function App() {
     // Human-readable SAN for the replay list.
     let playerSan = moveUci;
     try {
-      const boardForSan = new Chess(currentFen);
+      const boardForSan = new Chess(sourceFen);
       const promo =
         moveUci.length > 4
           ? (moveUci[4] as 'q' | 'r' | 'b' | 'n')
@@ -207,7 +225,7 @@ export function App() {
     }
 
     try {
-      const res = await submitMove(currentFen, moveUci, targetElo);
+      const res = await submitMove(sourceFen, moveUci, targetElo);
       if (!res.is_legal) {
         setGameStatus('Illegal move! Try another.');
         setIsMoving(false);
@@ -472,9 +490,9 @@ export function App() {
                 <ChessBoard
                   fen={displayFen}
                   playerColor={playerColor}
-                  isPlayerTurn={isPlayerTurn && isGameActive && !isViewingHistory}
+                  isPlayerTurn={isPlayerTurn && isGameActive}
                   onMove={handleMove}
-                  disabled={!isGameActive || isViewingHistory || isLoading}
+                  disabled={!isGameActive || isLoading}
                   animateMove={isViewingHistory ? null : moveAnimation}
                   evalPercent={evalBarPercent}
                 />
@@ -515,7 +533,7 @@ export function App() {
                       <Bot className="w-4 h-4 text-[#81b64c]" />
                     )}
                     {isViewingHistory
-                      ? `Reviewing move ${safeIndex} of ${positions.length - 1} — press → to return to live`
+                      ? `Reviewing move ${safeIndex} of ${positions.length - 1} — move a piece to replay from here`
                       : gameStatus}
                   </span>
                   <span className="font-mono text-stone-400">
