@@ -11,8 +11,22 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 CANDIDATE_BANK_DIR = DATA_DIR / "candidate_bank"
 MODELS_DIR = BASE_DIR / "models_saved"
+# Per-user artifacts. Keeping these separate is what makes training personal:
+# one user's blunders must never be served to another user.
+USER_BANK_DIR = CANDIDATE_BANK_DIR / "users"
+USER_PROFILE_DIR = PROCESSED_DATA_DIR / "user_profiles"
+USER_MODEL_DIR = MODELS_DIR / "users"
 
-for d in [DATA_DIR, RAW_DATA_DIR, PROCESSED_DATA_DIR, CANDIDATE_BANK_DIR, MODELS_DIR]:
+for d in [
+    DATA_DIR,
+    RAW_DATA_DIR,
+    PROCESSED_DATA_DIR,
+    CANDIDATE_BANK_DIR,
+    USER_BANK_DIR,
+    USER_PROFILE_DIR,
+    MODELS_DIR,
+    USER_MODEL_DIR,
+]:
     d.mkdir(parents=True, exist_ok=True)
 
 

@@ -73,43 +73,76 @@ def evaluate_model(
 
 
 if __name__ == "__main__":
+    """DVC evaluate stage: chronological holdout when real data is available."""
     import json
+    import logging
+
+    from src.config import MODELS_DIR, RAW_DATA_DIR
+    from src.data.chess_com_client import load_params
     from src.models.scenario_network import ScenarioNetwork
-    from src.training.dataset import CandidateBankManager
+    from src.training.dataset import CandidateBankManager, build_training_pairs_from_bank
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    params = load_params()
+    username = str(params.get("data", {}).get("username", "bonc_1")).lower()
 
     bank = CandidateBankManager()
     cands = bank.load_candidates()
     if not cands:
-        cands = [
-            {
-                "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
-                "player_color": "white",
-                "clock_remaining": 65.0,
-                "clock_bucket": "60-120s",
-                "opponent_rating_band": "1200-1400",
-            }
-        ]
+        from src.api.routes.scenario import get_default_candidates
+
+        cands = get_default_candidates()
         bank.save_candidates(cands)
 
+    raw_games: list[dict[str, Any]] = []
+    raw_path = RAW_DATA_DIR / f"{username}_games.json"
+    if raw_path.exists():
+        with open(raw_path, "r", encoding="utf-8") as f:
+            raw_games = json.load(f)
+    raw_games = raw_games[: int(params.get("extract", {}).get("max_games", 30))]
+
+    all_pairs: list[dict[str, Any]] = []
+    if raw_games and len(cands) > 1:
+        all_pairs = build_training_pairs_from_bank(raw_games, username, cands)
+
+    if len(all_pairs) >= 5:
+        split = int(len(all_pairs) * 0.8)
+        test_samples = all_pairs[split:]
+        logger.info(
+            "Chronological holdout: %d train pairs, %d test pairs", split, len(test_samples)
+        )
+    else:
+        logger.warning("Insufficient real pairs; using synthetic smoke sample")
+        test_samples = [
+            {
+                "history": [
+                    {
+                        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+                        "clock_remaining": 590.0,
+                        "player_rating": 1300,
+                        "opponent_rating": 1350,
+                        "ply": 2,
+                    }
+                ],
+                "target_candidate_idx": 0,
+                "target_clock_bucket": "60-120s",
+                "target_rating_band": "1200-1400",
+            }
+        ]
+
     model = ScenarioNetwork()
-    test_samples = [
-        {
-            "history": [
-                {
-                    "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
-                    "clock_remaining": 590.0,
-                    "player_rating": 1300,
-                    "opponent_rating": 1350,
-                    "ply": 2,
-                }
-            ],
-            "target_candidate_idx": 0,
-            "target_clock_bucket": "60-120s",
-            "target_rating_band": "1200-1400",
-        }
-    ]
+    checkpoint_path = MODELS_DIR / "scenario_model.pt"
+    if checkpoint_path.exists():
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        logger.info("Loaded trained checkpoint from %s", checkpoint_path)
+    else:
+        logger.warning("No checkpoint found; evaluating an untrained model")
+
     metrics = evaluate_model(model, test_samples, cands)
-    with open("metrics.json", "w") as f:
+    with open("metrics.json", "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
     print("Metrics written:", metrics)
 

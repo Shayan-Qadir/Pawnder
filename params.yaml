@@ -1,11 +1,30 @@
 data:
+  # Chess.com is the main user-facing platform. Players import their own
+  # Chess.com games and get a model personalized on those games.
   username: "bonc_1"
   max_months: 3
   time_control: "600"
 
+# Lichess is the BASE dataset. It is never used to serve a user's drills; it
+# pretrains the global scenario network that personalization fine-tunes from.
+base_data:
+  source: "lichess"
+  usernames:
+    - "thibault"
+    - "AnnaMuzychuk"
+  max_games_per_user: 40
+  perf_type: "rapid"
+  max_extract_games: 30
+
 blunder:
   cp_drop_threshold: 150
   win_prob_drop_threshold: 0.20
+
+engine:
+  depth: 6
+
+extract:
+  max_games: 30
 
 train:
   epochs: 5

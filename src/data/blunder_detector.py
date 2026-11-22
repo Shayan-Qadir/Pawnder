@@ -166,3 +166,94 @@ class BlunderDetector:
                     )
 
         return scenarios
+
+
+if __name__ == "__main__":
+    """Standalone DVC stage: raw games -> legal candidate position bank."""
+    import json
+    import logging
+    from pathlib import Path
+
+    from src.config import RAW_DATA_DIR, CANDIDATE_BANK_DIR
+    from src.data.chess_com_client import load_params
+    from src.data.game_parser import GameParser
+    from src.engine.stockfish_manager import StockfishManager
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    params = load_params()
+    data_params = params.get("data", {})
+    blunder_params = params.get("blunder", {})
+    username = str(data_params.get("username", "bonc_1")).lower()
+
+    raw_path = RAW_DATA_DIR / f"{username}_games.json"
+    if not raw_path.exists():
+        raise SystemExit(f"Raw games not found: {raw_path}. Run the ingest stage first.")
+
+    with open(raw_path, "r", encoding="utf-8") as f:
+        raw_games = json.load(f)
+
+    # Limit engine work for reproducible, fast pipeline runs.
+    max_games = int(params.get("extract", {}).get("max_games", 30))
+    total_games = len(raw_games)
+    raw_games = raw_games[:max_games]
+    logger.info("Analyzing %d of %d games", len(raw_games), total_games)
+
+    # A material-only heuristic can never produce a positive evaluation drop on
+    # the player's own move, so real engine evaluation is required here.
+    engine = StockfishManager(default_depth=int(params.get("engine", {}).get("depth", 8)))
+    if engine.process is None:
+        logger.warning("Stockfish unavailable; extraction will use the material-only fallback")
+
+    detector = BlunderDetector(
+        cp_drop_threshold=float(blunder_params.get("cp_drop_threshold", 150.0)),
+        win_prob_drop_threshold=float(blunder_params.get("win_prob_drop_threshold", 0.20)),
+        engine_evaluator=engine,
+    )
+
+    parsed_games = []
+    all_scenarios = []
+    for raw in raw_games:
+        parsed = GameParser.parse_pgn(raw.get("pgn", ""), target_username=username)
+        if parsed is None:
+            continue
+        parsed_games.append(parsed)
+        all_scenarios.extend(detector.extract_scenarios_from_game(parsed))
+
+    # Deduplicate by FEN while preserving chronology.
+    seen: set[str] = set()
+    candidates = []
+    for scenario in all_scenarios:
+        if scenario["fen"] in seen:
+            continue
+        seen.add(scenario["fen"])
+        candidates.append(scenario)
+
+    if not candidates:
+        logger.warning("No blunders extracted; seeding a labeled fallback candidate")
+        candidates = [
+            {
+                "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+                "player_color": "white",
+                "clock_remaining": 65.0,
+                "clock_bucket": "60-120s",
+                "opponent_rating": 1350,
+                "opponent_rating_band": "1200-1400",
+                "blunder_move": "Nxe5",
+                "cp_drop": 210.0,
+                "win_prob_drop": 0.28,
+                "reason": "Time scramble blunder (<45s)",
+                "ply": 42,
+                "_source": "fallback_seed",
+            }
+        ]
+
+    out_path = CANDIDATE_BANK_DIR / "legal_positions.json"
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(candidates, f, indent=2)
+
+    engine.close()
+    print(
+        f"Extracted {len(candidates)} unique scenarios from {len(parsed_games)} games -> {out_path}"
+    )

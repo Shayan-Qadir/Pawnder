@@ -10,6 +10,21 @@ from src.config import settings, RAW_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
+PARAMS_PATH = Path(__file__).resolve().parent.parent.parent / "params.yaml"
+
+
+def load_params() -> dict[str, Any]:
+    """Load params.yaml for standalone DVC stage execution."""
+    try:
+        import yaml
+
+        if PARAMS_PATH.exists():
+            with open(PARAMS_PATH, "r", encoding="utf-8") as f:
+                return yaml.safe_load(f) or {}
+    except Exception as exc:  # pragma: no cover - defensive for offline runs
+        logger.warning("Could not read params.yaml: %s", exc)
+    return {}
+
 
 class ChessComClient:
     """Client to query Chess.com Published Data API."""
@@ -76,3 +91,59 @@ class ChessComClient:
             with open(user_cache_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         return None
+
+
+def _offline_sample_games(username: str) -> list[dict[str, Any]]:
+    """
+    Clearly-labeled, deterministic sample games used only when the Chess.com
+    API is unreachable. Keeps the DVC pipeline runnable offline.
+    """
+    pgn = """[Event "Live Chess"]
+[Site "Chess.com"]
+[Date "2026.10.01"]
+[White "{user}"]
+[Black "practice_opponent"]
+[Result "0-1"]
+[WhiteElo "1350"]
+[BlackElo "1420"]
+[TimeControl "600"]
+
+1. e4 {{[%clk 0:09:58]}} 1... e5 {{[%clk 0:09:55]}} 2. Nf3 {{[%clk 0:09:40]}} 2... Nc6 {{[%clk 0:09:30]}}
+3. Bc4 {{[%clk 0:09:12]}} 3... Bc5 {{[%clk 0:09:00]}} 4. Nxe5 {{[%clk 0:00:41]}} 4... Nxe5 {{[%clk 0:00:38]}} 0-1
+""".format(user=username)
+    return [
+        {
+            "url": "https://www.chess.com/game/live/offline-sample",
+            "time_class": "rapid",
+            "time_control": "600",
+            "white": {"username": username, "rating": 1350},
+            "black": {"username": "practice_opponent", "rating": 1420},
+            "result": "0-1",
+            "pgn": pgn,
+            "_source": "offline_sample",
+        }
+    ]
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    params = load_params()
+    data_params = params.get("data", {})
+    username = str(data_params.get("username", "bonc_1"))
+    max_months = int(data_params.get("max_months", 3))
+
+    client = ChessComClient()
+    games = client.fetch_player_games(username, max_months=max_months)
+    if not games:
+        cached = client.load_cached_games(username)
+        if cached:
+            games = cached
+            logger.info("Using %d cached games for %s", len(games), username)
+    if not games:
+        games = _offline_sample_games(username)
+        logger.warning("Live fetch returned no games; writing labeled offline sample")
+
+    out_file = RAW_DATA_DIR / f"{username.lower()}_games.json"
+    with open(out_file, "w", encoding="utf-8") as f:
+        json.dump(games, f, indent=2)
+    print(f"Ingested {len(games)} games -> {out_file}")

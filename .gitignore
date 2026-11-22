@@ -40,6 +40,17 @@ mlruns/
 mlflow_artifacts/
 .dvc/cache
 
+# Per-user runtime artifacts (generated on import; never commit player data)
+data/candidate_bank/users/
+data/processed/user_profiles/
+data/raw/*_games.json
+models_saved/users/
+
+# Local runtime setup
+.venv/
+bin/
+!models_saved/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
@@ -79,3 +90,9 @@ mlflow.db
 mlruns/
 mlflow_artifacts/
 .dvc/cache
+
+# Per-user runtime artifacts (generated on import; never commit player data)
+data/candidate_bank/users/
+data/processed/user_profiles/
+data/raw/*_games.json
+models_saved/users/

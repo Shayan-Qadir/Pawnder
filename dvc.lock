@@ -1,12 +1,16 @@
 schema: '2.0'
 stages:
   ingest:
-    cmd: python -m src.data.chess_com_client
+    cmd: python -m src.data.game_ingest
     deps:
     - path: src/data/chess_com_client.py
       hash: md5
-      md5: abcf7385d4a4074ec73ddd70be82f679
-      size: 2975
+      md5: 5a6c9eff577e9f29d276b366e41c3d7f
+      size: 5534
+    - path: src/data/game_ingest.py
+      hash: md5
+      md5: de7624226df087857376cbcb41fd73d0
+      size: 1396
     params:
       params.yaml:
         data.max_months: 3
@@ -14,39 +18,61 @@ stages:
     outs:
     - path: data/raw/bonc_1_games.json
       hash: md5
-      md5: ea7878925ffd88cf003805f7465bfdae
-      size: 135773
+      md5: 72403cd7810ecdb4f678e7578ff8600f
+      size: 988698
   extract_targets:
     cmd: python -m src.data.blunder_detector
     deps:
     - path: data/raw/bonc_1_games.json
       hash: md5
-      md5: ea7878925ffd88cf003805f7465bfdae
-      size: 135773
+      md5: 72403cd7810ecdb4f678e7578ff8600f
+      size: 988698
     - path: src/data/blunder_detector.py
       hash: md5
-      md5: ac23a18a64adfd0a9da869cf745fbf3e
-      size: 6008
+      md5: 478973ce785135c0edefad176e020b06
+      size: 9515
+    - path: src/data/chess_com_client.py
+      hash: md5
+      md5: 5a6c9eff577e9f29d276b366e41c3d7f
+      size: 5534
     - path: src/data/game_parser.py
       hash: md5
       md5: 7450a1a92551384096554675ca456768
       size: 4907
+    - path: src/engine/stockfish_manager.py
+      hash: md5
+      md5: 504cd5721cd4baf22a47dae4b7bf6f02
+      size: 7250
     params:
       params.yaml:
         blunder.cp_drop_threshold: 150
         blunder.win_prob_drop_threshold: 0.2
+        engine.depth: 6
+        extract.max_games: 30
     outs:
     - path: data/candidate_bank/legal_positions.json
       hash: md5
-      md5: 88301538052d2e93e07cf1ae37d9e99e
-      size: 450
+      md5: c3053dd3849a078dd6f9e2956ae6285c
+      size: 37049
   train:
     cmd: python -m src.training.train
     deps:
     - path: data/candidate_bank/legal_positions.json
       hash: md5
-      md5: 88301538052d2e93e07cf1ae37d9e99e
-      size: 450
+      md5: c3053dd3849a078dd6f9e2956ae6285c
+      size: 37049
+    - path: data/raw/bonc_1_games.json
+      hash: md5
+      md5: 72403cd7810ecdb4f678e7578ff8600f
+      size: 988698
+    - path: src/data/chess_com_client.py
+      hash: md5
+      md5: 5a6c9eff577e9f29d276b366e41c3d7f
+      size: 5534
+    - path: src/data/game_parser.py
+      hash: md5
+      md5: 7450a1a92551384096554675ca456768
+      size: 4907
     - path: src/models/board_encoder.py
       hash: md5
       md5: 332c9d21b919de2f54aafd5ae0c0c81e
@@ -61,31 +87,161 @@ stages:
       size: 2904
     - path: src/training/dataset.py
       hash: md5
-      md5: a9bd2ab56e1fa0b3a6333b45b2ef9ce8
-      size: 5610
+      md5: 5ae3b1afbe2b70bea998a494991bff9e
+      size: 10492
     params:
       params.yaml:
         train.batch_size: 8
+        train.embedding_dim: 128
         train.epochs: 5
+        train.hidden_dim: 256
         train.lr: 0.001
     outs:
     - path: models_saved/scenario_model.pt
       hash: md5
-      md5: b09fd3e186d27254050f91eab16851e5
-      size: 3772985
+      md5: eb1cec692845f74c4bc44b89902a1c8a
+      size: 3773049
   evaluate:
     cmd: python -m src.training.evaluate
     deps:
+    - path: data/candidate_bank/legal_positions.json
+      hash: md5
+      md5: c3053dd3849a078dd6f9e2956ae6285c
+      size: 37049
+    - path: data/raw/bonc_1_games.json
+      hash: md5
+      md5: 72403cd7810ecdb4f678e7578ff8600f
+      size: 988698
     - path: models_saved/scenario_model.pt
       hash: md5
-      md5: b09fd3e186d27254050f91eab16851e5
-      size: 3772985
+      md5: c08b3c51f013e84605778d6d1ee11789
+      size: 3773177
     - path: src/training/evaluate.py
       hash: md5
-      md5: de838899dba99c9d11c8aa26f9ef209c
-      size: 3927
+      md5: 8bfabb30333d1b100f249bbc7c855090
+      size: 5435
     outs:
     - path: metrics.json
       hash: md5
-      md5: fd05af90ec14bbafd952043faa340db3
-      size: 170
+      md5: 185a6e784bb8c7ea25bc302863a08fc4
+      size: 172
+  ingest_base:
+    cmd: python -m src.data.lichess_base_ingest
+    deps:
+    - path: src/data/lichess_base_ingest.py
+      hash: md5
+      md5: 67868f27c6f09a97486d74071dd7c37b
+      size: 2901
+    - path: src/data/lichess_client.py
+      hash: md5
+      md5: 544a2374f14d9a011989726c4a08d17c
+      size: 5216
+    params:
+      params.yaml:
+        base_data.max_games_per_user: 40
+        base_data.perf_type: rapid
+        base_data.usernames:
+        - thibault
+        - AnnaMuzychuk
+    outs:
+    - path: data/raw/lichess_base_games.json
+      hash: md5
+      md5: 7ab0e671dc5f81d13ef8e71f13881927
+      size: 42055
+  extract_base:
+    cmd: python -m src.data.lichess_base_extract
+    deps:
+    - path: data/raw/lichess_base_games.json
+      hash: md5
+      md5: 7ab0e671dc5f81d13ef8e71f13881927
+      size: 42055
+    - path: src/data/blunder_detector.py
+      hash: md5
+      md5: 478973ce785135c0edefad176e020b06
+      size: 9515
+    - path: src/data/game_parser.py
+      hash: md5
+      md5: 7450a1a92551384096554675ca456768
+      size: 4907
+    - path: src/data/lichess_base_extract.py
+      hash: md5
+      md5: eb38104d19f27fb8557db3b24067cdc1
+      size: 3278
+    - path: src/data/lichess_base_ingest.py
+      hash: md5
+      md5: 67868f27c6f09a97486d74071dd7c37b
+      size: 2901
+    - path: src/data/lichess_client.py
+      hash: md5
+      md5: 544a2374f14d9a011989726c4a08d17c
+      size: 5216
+    - path: src/engine/stockfish_manager.py
+      hash: md5
+      md5: 504cd5721cd4baf22a47dae4b7bf6f02
+      size: 7250
+    params:
+      params.yaml:
+        base_data.max_extract_games: 30
+        blunder.cp_drop_threshold: 150
+        blunder.win_prob_drop_threshold: 0.2
+        engine.depth: 6
+    outs:
+    - path: data/candidate_bank/lichess_base.json
+      hash: md5
+      md5: fb09c301ea9bfe488907a8891731c34e
+      size: 39685
+  train_base:
+    cmd: python -m src.training.train_base
+    deps:
+    - path: data/candidate_bank/lichess_base.json
+      hash: md5
+      md5: fb09c301ea9bfe488907a8891731c34e
+      size: 39685
+    - path: data/raw/lichess_base_games.json
+      hash: md5
+      md5: 7ab0e671dc5f81d13ef8e71f13881927
+      size: 42055
+    - path: src/data/game_parser.py
+      hash: md5
+      md5: 7450a1a92551384096554675ca456768
+      size: 4907
+    - path: src/data/lichess_base_extract.py
+      hash: md5
+      md5: eb38104d19f27fb8557db3b24067cdc1
+      size: 3278
+    - path: src/models/board_encoder.py
+      hash: md5
+      md5: 332c9d21b919de2f54aafd5ae0c0c81e
+      size: 2621
+    - path: src/models/history_gru.py
+      hash: md5
+      md5: 8ee2fd51f52e0a11f49b7a12a3dcd203
+      size: 1256
+    - path: src/models/scenario_network.py
+      hash: md5
+      md5: 9ff7bcbb2c47664e358701082f7902cd
+      size: 2904
+    - path: src/training/dataset.py
+      hash: md5
+      md5: 2f79707e9265896a4c017f5927b56f6e
+      size: 11311
+    - path: src/training/train.py
+      hash: md5
+      md5: 72433a42536b8594586ea202162e89c9
+      size: 7946
+    - path: src/training/train_base.py
+      hash: md5
+      md5: aaa523406d07257c1c430098302c0b40
+      size: 2510
+    params:
+      params.yaml:
+        train.batch_size: 8
+        train.embedding_dim: 128
+        train.epochs: 5
+        train.hidden_dim: 256
+        train.lr: 0.001
+    outs:
+    - path: models_saved/scenario_model.pt
+      hash: md5
+      md5: c08b3c51f013e84605778d6d1ee11789
+      size: 3773177

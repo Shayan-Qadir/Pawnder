@@ -1,7 +1,9 @@
 stages:
+  # ---- Main platform: Chess.com (the player-facing data) ----
   ingest:
-    cmd: python -m src.data.chess_com_client
+    cmd: python -m src.data.game_ingest
     deps:
+      - src/data/game_ingest.py
       - src/data/chess_com_client.py
     params:
       - data.username
@@ -15,26 +17,70 @@ stages:
     deps:
       - src/data/blunder_detector.py
       - src/data/game_parser.py
+      - src/data/chess_com_client.py
+      - src/engine/stockfish_manager.py
       - data/raw/bonc_1_games.json
     params:
       - blunder.cp_drop_threshold
       - blunder.win_prob_drop_threshold
+      - engine.depth
+      - extract.max_games
     outs:
       - data/candidate_bank/legal_positions.json:
           cache: true
 
-  train:
-    cmd: python -m src.training.train
+  # ---- Base dataset: Lichess (pretrains the global neural model) ----
+  ingest_base:
+    cmd: python -m src.data.lichess_base_ingest
+    deps:
+      - src/data/lichess_base_ingest.py
+      - src/data/lichess_client.py
+    params:
+      - base_data.usernames
+      - base_data.max_games_per_user
+      - base_data.perf_type
+    outs:
+      - data/raw/lichess_base_games.json:
+          cache: true
+
+  extract_base:
+    cmd: python -m src.data.lichess_base_extract
+    deps:
+      - src/data/lichess_base_extract.py
+      - src/data/lichess_base_ingest.py
+      - src/data/lichess_client.py
+      - src/data/game_parser.py
+      - src/data/blunder_detector.py
+      - src/engine/stockfish_manager.py
+      - data/raw/lichess_base_games.json
+    params:
+      - blunder.cp_drop_threshold
+      - blunder.win_prob_drop_threshold
+      - engine.depth
+      - base_data.max_extract_games
+    outs:
+      - data/candidate_bank/lichess_base.json:
+          cache: true
+
+  train_base:
+    cmd: python -m src.training.train_base
     deps:
       - src/models/board_encoder.py
       - src/models/history_gru.py
       - src/models/scenario_network.py
       - src/training/dataset.py
-      - data/candidate_bank/legal_positions.json
+      - src/training/train.py
+      - src/training/train_base.py
+      - src/data/lichess_base_extract.py
+      - src/data/game_parser.py
+      - data/raw/lichess_base_games.json
+      - data/candidate_bank/lichess_base.json
     params:
       - train.epochs
       - train.batch_size
       - train.lr
+      - train.embedding_dim
+      - train.hidden_dim
     outs:
       - models_saved/scenario_model.pt:
           cache: true
@@ -42,8 +88,10 @@ stages:
   evaluate:
     cmd: python -m src.training.evaluate
     deps:
-      - models_saved/scenario_model.pt
       - src/training/evaluate.py
+      - models_saved/scenario_model.pt
+      - data/candidate_bank/legal_positions.json
+      - data/raw/bonc_1_games.json
     metrics:
       - metrics.json:
           cache: false

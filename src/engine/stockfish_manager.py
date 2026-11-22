@@ -30,7 +30,10 @@ class StockfishManager:
             self._start_engine()
 
     def _find_stockfish(self) -> Optional[str]:
-        """Locates stockfish executable in PATH or project dirs."""
+        """Locates stockfish via env var, PATH, or project dirs."""
+        configured = os.getenv("STOCKFISH_PATH", "")
+        if configured and os.path.exists(configured):
+            return configured
         path = shutil.which("stockfish") or shutil.which("stockfish.exe")
         if not path:
             candidate_paths = [

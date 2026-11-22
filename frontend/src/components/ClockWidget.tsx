@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Timer, AlertTriangle } from 'lucide-react';
 
 interface ClockWidgetProps {
@@ -6,6 +6,8 @@ interface ClockWidgetProps {
   isActive: boolean;
   onTimeOut: () => void;
   label: string;
+  /** Change this to restart the clock without changing initialSeconds. */
+  resetKey?: number;
 }
 
 export const ClockWidget: React.FC<ClockWidgetProps> = ({
@@ -13,28 +15,36 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
   isActive,
   onTimeOut,
   label,
+  resetKey = 0,
 }) => {
   const [seconds, setSeconds] = useState(initialSeconds);
+  const secondsRef = useRef(initialSeconds);
+  const timedOutRef = useRef(false);
 
   useEffect(() => {
+    secondsRef.current = initialSeconds;
+    timedOutRef.current = false;
     setSeconds(initialSeconds);
-  }, [initialSeconds]);
+  }, [initialSeconds, resetKey]);
 
   useEffect(() => {
-    if (!isActive || seconds <= 0) return;
+    if (!isActive) return;
 
-    const interval = setInterval(() => {
-      setSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onTimeOut();
-          return 0;
-        }
-        return prev - 1;
-      });
+    // Keep the countdown in a ref so the interval is not recreated on every tick.
+    const interval = window.setInterval(() => {
+      secondsRef.current = Math.max(0, secondsRef.current - 1);
+      setSeconds(secondsRef.current);
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
+  }, [isActive]);
+
+  // Notify the parent from an effect, never from inside a state updater.
+  useEffect(() => {
+    if (isActive && seconds <= 0 && !timedOutRef.current) {
+      timedOutRef.current = true;
+      onTimeOut();
+    }
   }, [isActive, seconds, onTimeOut]);
 
   const minutes = Math.floor(seconds / 60);

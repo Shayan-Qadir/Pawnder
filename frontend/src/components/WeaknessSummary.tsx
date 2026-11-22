@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserProfile } from '../services/api';
-import { Flame, ShieldAlert, Award, RefreshCw } from 'lucide-react';
+import { Flame, ShieldAlert, Award, RefreshCw, Loader2 } from 'lucide-react';
 
 interface WeaknessSummaryProps {
   profile: UserProfile | null;
@@ -26,6 +26,12 @@ export const WeaknessSummary: React.FC<WeaknessSummaryProps> = ({
           <p className="text-xs text-stone-400">
             Player: <span className="text-white font-medium">{profile.username}</span> | 10+0 Rapid
           </p>
+          {isLoading && (
+            <p className="text-[11px] text-[#81b64c] mt-1 flex items-center gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Refreshing profile: scanning new games &amp; retraining...
+            </p>
+          )}
         </div>
         <button
           onClick={onRefresh}
@@ -40,18 +46,45 @@ export const WeaknessSummary: React.FC<WeaknessSummaryProps> = ({
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         <div className="bg-[#1e1c19] p-3 rounded-lg border border-[#363431]">
-          <span className="text-xs text-stone-400 block">Games Audited</span>
+          <span className="text-xs text-stone-400 block">Games Used</span>
           <span className="text-xl font-bold text-white">{profile.total_games}</span>
         </div>
         <div className="bg-[#1e1c19] p-3 rounded-lg border border-[#363431]">
-          <span className="text-xs text-stone-400 block">Losses Analyzed</span>
+          <span className="text-xs text-stone-400 block">Losses</span>
           <span className="text-xl font-bold text-amber-400">{profile.losses_analyzed}</span>
         </div>
         <div className="bg-[#1e1c19] p-3 rounded-lg border border-[#363431]">
-          <span className="text-xs text-stone-400 block">Blunder Stretch</span>
+          <span className="text-xs text-stone-400 block">Blunders</span>
           <span className="text-xl font-bold text-red-400">{profile.blunders_extracted}</span>
         </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <div className="bg-[#1e1c19] p-3 rounded-lg border border-[#363431]">
+          <span className="text-xs text-stone-400 block">Stockfish-scanned games</span>
+          <span className="text-lg font-bold text-white">
+            {profile.games_analyzed ?? 0}
+            <span className="text-xs font-normal text-stone-500"> / {profile.total_games}</span>
+          </span>
+        </div>
+        <div className="bg-[#1e1c19] p-3 rounded-lg border border-[#363431]">
+          <span className="text-xs text-stone-400 block">Training pairs</span>
+          <span className="text-lg font-bold text-[#81b64c]">{profile.training_pairs ?? 0}</span>
+        </div>
+      </div>
+      <p className="text-[11px] text-stone-500 -mt-3 mb-2 leading-relaxed">
+        Re-importing scans only games that arrived since your last import. Already-scanned
+        games are never re-analyzed; losses are prioritized.
+      </p>
+      <p
+        className={`text-[11px] mb-4 font-medium ${
+          profile.model_reused ? 'text-[#81b64c]' : 'text-stone-400'
+        }`}
+      >
+        {profile.model_reused
+          ? 'No new games — private model loaded from cache (fast import).'
+          : 'New data analyzed — private model retrained from the Lichess base checkpoint.'}
+      </p>
 
       {/* Identified Weaknesses */}
       <div className="mb-4">

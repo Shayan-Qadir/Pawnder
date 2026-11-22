@@ -50,16 +50,21 @@ def play_move(req: PracticeMoveRequest):
             status="Invalid move UCI format",
         )
 
-    # Push player move
+    # Push player move and remember the intermediate board so the UI can
+    # animate the player's move before Stockfish replies.
     board.push(move)
+    fen_after_player = board.fen()
 
     if board.is_game_over():
+        result = board.result()
         return PracticeMoveResponse(
             is_legal=True,
+            fen_after_player=fen_after_player,
             fen_after=board.fen(),
             evaluation_cp=0.0,
             game_over=True,
-            status=f"Game Over: {board.result()}",
+            status=f"Game Over: {result}",
+            result=result,
         )
 
     # Request Stockfish response move
@@ -67,6 +72,7 @@ def play_move(req: PracticeMoveRequest):
         board.fen(), movetime_ms=350, elo=req.target_elo
     )
     engine_move_san = None
+    applied_engine_move = False
 
     if engine_move_uci and engine_move_uci != "0000":
         try:
@@ -74,19 +80,29 @@ def play_move(req: PracticeMoveRequest):
             if eng_move in board.legal_moves:
                 engine_move_san = board.san(eng_move)
                 board.push(eng_move)
+                applied_engine_move = True
+            else:
+                logger.warning("Engine returned illegal move: %s", engine_move_uci)
         except Exception:
             pass
 
+    if not applied_engine_move:
+        engine_move_uci = None
+
     eval_score = engine.evaluate_position(board.fen())
+    game_over = board.is_game_over()
+    result = board.result() if game_over else None
 
     return PracticeMoveResponse(
         is_legal=True,
+        fen_after_player=fen_after_player,
         engine_move_uci=engine_move_uci,
         engine_move_san=engine_move_san,
         fen_after=board.fen(),
         evaluation_cp=eval_score,
-        game_over=board.is_game_over(),
-        status="In progress" if not board.is_game_over() else f"Game Over: {board.result()}",
+        game_over=game_over,
+        status="In progress" if not game_over else f"Game Over: {result}",
+        result=result,
     )
 
 
