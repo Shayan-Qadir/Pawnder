@@ -83,9 +83,10 @@ python -m src.data.lichess_base_extract
 python -m src.training.train_base      # pretrain global checkpoint on Lichess
 python -m src.training.train           # fine-tune on Chess.com data
 python -m src.training.evaluate
+python -m src.training.evaluate_usefulness  # chronological holdout vs baselines
 ```
 
-⚠️ `train_base`/`train` overwrite `models_saved/scenario_model.pt`, and `evaluate` overwrites `metrics.json`.
+⚠️ `train_base`/`train` overwrite `models_saved/scenario_model.pt`, `evaluate` overwrites `metrics.json`, and `evaluate_usefulness` overwrites `metrics_usefulness.json`. See `MODEL_JUSTIFICATION.md` for how to read the usefulness numbers.
 
 ---
 

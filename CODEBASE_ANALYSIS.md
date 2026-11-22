@@ -48,10 +48,12 @@ Everything else (parsing, clock regex, centipawn math, bucket boundaries, UCI co
 > move replay, a vertical evaluation bar, drag-and-drop or click-to-move,
 > Enter-to-import, and loading indicators for import, generation, and move submission.
 > See `SETUP_REPORT.md` and `RUNBOOK.md` for the
-> current state. The model is still a small demo:
-> cross-platform evaluation on a 20-pair holdout reports 0.05 top-1 retrieval
-> accuracy, so personalization comes mainly from restricting the candidate pool,
-> not from strong learned ranking.
+> current state. Exact next-FEN prediction remains weak (0.05–0 top-1), so the
+> final evaluation reframes the task honestly as **useful drill selection**: on a
+> chronological 80/20 holdout over two users, the learned ranker matches the
+> failure category of later real blunders 97.4% of the time vs 71–79% for
+> random / recent / hand-rule baselines. See `MODEL_JUSTIFICATION.md` and the
+> final section below for the full numbers and limitations.
 
 ---
 
@@ -575,9 +577,29 @@ With a real `parsed_games` list this immediately turns the existing `HistoryScen
 - **Centipawn (cp)** — 100 cp = 1 pawn. The thresholds (150 cp, 0.20 win-probability drop) define what the project calls a blunder.
 - **Candidate bank** — the set of legal, real-game positions the model may retrieve; retrieval makes legality structural.
 - **History tensor** — `(batch, 5, 131)`: up to five prior blunder moments, each a 128-d board embedding + `[clock_ratio, rating_delta, ply/100]`.
-- **Retrieval head** — cosine similarity between the GRU-produced query and CNN-encoded candidates; argmax selects a FEN.
+- **Retrieval head** — GRU-query cosine similarity blended with the most-recent blunder's learned board-embedding similarity; the score ranks CNN-encoded candidates in the private bank.
 - **Gate** — CI test asserting every retrieved FEN is valid and mean inference < 150 ms.
 
-### 10.4 Final assessment
+### 10.4 Final assessment (historical)
 
 Pawnder is a **credible, well-organized prototype shell** with a genuinely nice product idea (retrieve real high-pressure positions instead of generating them) and surprisingly complete surrounding infrastructure (DVC hashes, quality gate, UI, CI, Compose). Its weak point is the center: the data pairing, history conditioning, and training signal that would make the "ML" in MLOps real. Fixing items P0–P1 above would turn it from a demo into a defensible end-to-end system; until then, the README should be read as a target architecture rather than a description of current behavior.
+
+---
+
+## 11. Final model justification (current working tree)
+
+Sections 1–10 are the original analysis; the following supersedes the model-specific findings now that real data, real history, and a chronological evaluator exist.
+
+**What changed in the model:** `ScenarioNetwork.retrieval_logits` now blends the GRU query with cosine similarity between the *most recent* blunder's learned board embedding and every private-bank candidate. This keeps the learned Lichess board representation as the core retrieval signal while using the 5-step history as context. No new parameters were added, so existing checkpoints remain loadable. `train_scenario_model` explicitly freezes the board encoder so precomputed candidate embeddings and history encodings always use the same weights.
+
+**Evidence (`python -m src.training.evaluate_usefulness` → `metrics_usefulness.json`):**
+
+| Metric | Private ranker | Recent | Random | Hand rule / majority | Global base |
+|---|---:|---:|---:|---:|---:|
+| Same-failure-category drill | **0.974** | 0.789 | 0.713 | 0.711 | **0.974** |
+| Board similarity to later real blunder | **0.984** | 0.924 | 0.865 | 0.940 | — |
+| Actual later blunder in top 5 | **0.589** | — | ~0.075 chance | — | — |
+
+Evaluated on `bonc_1` (10 test pairs / 51 candidates) and `1tshassan` (19 / 95), with an **80/20 chronological split** and the evaluated model fine-tuned only on the older 80%. A label-shuffle control collapses exact top-1 to 0.079 (random: 0.076).
+
+**Interpretation:** the ML representation is useful for selecting a *relevant* drill from a user's own bank, which is the product's actual job. It is not evidence that exact future positions are predictable (top-1 is 0.0), and it is not a live effectiveness study. The Lichess-pretrained model matches the privately fine-tuned model on category, so current personalization comes mainly from the private bank plus history-conditioned scoring; the private checkpoint remains the mechanism for future feedback-driven training. Full narrative and limitations are in `MODEL_JUSTIFICATION.md`.

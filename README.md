@@ -32,6 +32,15 @@ A username is required — scenario generation without one returns `422`. The
 Lichess base bank and global model are used only by the DVC
 pretraining/evaluation pipeline, never to serve scenarios.
 
+### Is the ML actually useful?
+
+Yes for **offline drill selection**: on a chronological holdout over two real
+Chess.com users, the ranker picked a drill from the same failure category as
+later real blunders **97.4%** of the time (vs 71–79% for random/recent/hand-rule
+baselines), with board similarity **0.984 vs 0.865 random**. No A/B test was
+run, so we do not claim rating improvement. Full method, numbers, and limits:
+[`MODEL_JUSTIFICATION.md`](MODEL_JUSTIFICATION.md).
+
 ---
 
 ## Architecture Overview

@@ -21,8 +21,10 @@ class ScenarioNetwork(nn.Module):
         history_hidden_dim: int = 256,
         num_clock_buckets: int = 4,
         num_rating_bands: int = 6,
+        history_similarity_weight: float = 10.0,
     ):
         super().__init__()
+        self.history_similarity_weight = history_similarity_weight
         self.board_encoder = CompactBoardCNN(
             in_channels=settings.BOARD_CHANNELS, embedding_dim=board_embedding_dim
         )
@@ -65,10 +67,21 @@ class ScenarioNetwork(nn.Module):
         user_rep = self.history_gru(history_tensors)  # (batch_size, 256)
         query_vec = self.retrieval_proj(user_rep)  # (batch_size, 128)
 
-        # Cosine similarity for retrieval
+        # Cosine similarity for retrieval. The learned query captures the 5-step
+        # pattern; the last real blunder's board embedding (history tensors are
+        # left-padded, so the final step is always the most recent) is a strong
+        # signal for "practice a position that looks like this one". Blending
+        # both keeps personalization while avoiding a cold, noisy query.
         norm_query = F.normalize(query_vec, p=2, dim=-1)
         norm_candidates = F.normalize(candidate_embeddings, p=2, dim=-1)
-        retrieval_logits = torch.matmul(norm_query, norm_candidates.T)  # (batch_size, num_candidates)
+        query_similarity = torch.matmul(norm_query, norm_candidates.T)
+        last_board = history_tensors[:, -1, : candidate_embeddings.shape[-1]]
+        history_similarity = torch.matmul(
+            F.normalize(last_board, p=2, dim=-1), norm_candidates.T
+        )
+        retrieval_logits = (
+            query_similarity + self.history_similarity_weight * history_similarity
+        )
 
         clock_logits = self.clock_head(user_rep)
         rating_logits = self.rating_head(user_rep)

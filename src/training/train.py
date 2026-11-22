@@ -59,7 +59,14 @@ def train_scenario_model(
 
     model = model.to(device)
 
-    # Precompute candidate embeddings
+    # Freeze the board encoder so the precomputed candidate embeddings and the
+    # history encoding always use the same weights. Letting it move mid-training
+    # made retrieval learn against stale vectors.
+    for param in model.board_encoder.parameters():
+        param.requires_grad_(False)
+    model.board_encoder.eval()
+
+    # Precompute candidate embeddings once for the frozen encoder.
     candidate_embeddings = bank_mgr.compute_embeddings(model.board_encoder, device=str(device))
     candidate_embeddings = candidate_embeddings.to(device)
 
@@ -73,6 +80,9 @@ def train_scenario_model(
     model.train()
 
     for epoch in range(epochs):
+        model.train()
+        model.board_encoder.eval()  # frozen encoder: keep BN in inference mode
+
         epoch_loss = 0.0
         for batch in dataloader:
             history = batch["history"].to(device)
