@@ -41,8 +41,8 @@ stages:
       size: 4907
     - path: src/engine/stockfish_manager.py
       hash: md5
-      md5: 504cd5721cd4baf22a47dae4b7bf6f02
-      size: 7250
+      md5: 8af4eb726798baf4c205847ed8bbaa5d
+      size: 8730
     params:
       params.yaml:
         blunder.cp_drop_threshold: 150
@@ -150,8 +150,8 @@ stages:
       size: 5216
     - path: src/engine/stockfish_manager.py
       hash: md5
-      md5: 504cd5721cd4baf22a47dae4b7bf6f02
-      size: 7250
+      md5: 8af4eb726798baf4c205847ed8bbaa5d
+      size: 8730
     params:
       params.yaml:
         base_data.max_extract_games: 30

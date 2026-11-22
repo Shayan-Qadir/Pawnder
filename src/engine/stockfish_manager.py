@@ -4,8 +4,10 @@ Manages chess engine evaluation and opponent moves with skill and Elo controls.
 """
 import logging
 import os
+import queue
 import shutil
 import subprocess
+import threading
 import time
 from typing import Optional, Tuple
 import chess
@@ -26,6 +28,8 @@ class StockfishManager:
         self.default_elo = default_elo
         self.binary_path = binary_path or self._find_stockfish()
         self.process: Optional[subprocess.Popen] = None
+        self._lines: queue.Queue[Optional[str]] = queue.Queue()
+        self._reader: Optional[threading.Thread] = None
         if self.binary_path:
             self._start_engine()
 
@@ -57,6 +61,10 @@ class StockfishManager:
                 text=True,
                 bufsize=1,
             )
+            # Read stdout on a daemon thread. A blocking readline() in the
+            # request thread used to hang the UI forever if the engine stalled.
+            self._reader = threading.Thread(target=self._read_output, daemon=True)
+            self._reader.start()
             self._send_command("uci")
             self._wait_for("uciok")
             self._send_command("isready")
@@ -72,18 +80,46 @@ class StockfishManager:
             self.process.stdin.write(f"{cmd}\n")
             self.process.stdin.flush()
 
-    def _wait_for(self, target: str, timeout: float = 3.0) -> list[str]:
-        lines = []
+    def _read_output(self) -> None:
+        """Continuously drain engine stdout so reads can never block a request."""
         if not self.process or not self.process.stdout:
-            return lines
-        start = time.time()
-        while time.time() - start < timeout:
-            line = self.process.stdout.readline()
-            if not line:
+            return
+        try:
+            for line in iter(self.process.stdout.readline, ""):
+                self._lines.put(line.strip())
+        except (ValueError, OSError):
+            pass
+        finally:
+            self._lines.put(None)  # EOF sentinel
+
+    def _drain(self) -> None:
+        """Discard stale UCI lines left over from the previous search."""
+        while True:
+            try:
+                if self._lines.get_nowait() is None:
+                    self._lines.put(None)
+                    break
+            except queue.Empty:
                 break
-            line_str = line.strip()
-            lines.append(line_str)
-            if target in line_str:
+
+    def _wait_for(self, target: str, timeout: float = 3.0) -> list[str]:
+        lines: list[str] = []
+        if not self.process:
+            return lines
+        deadline = time.time() + timeout
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            try:
+                line = self._lines.get(timeout=remaining)
+            except queue.Empty:
+                break
+            if line is None:
+                self._lines.put(None)  # keep the sentinel for future callers
+                break
+            lines.append(line)
+            if target in line:
                 break
         return lines
 
@@ -95,6 +131,7 @@ class StockfishManager:
         self._send_command(f"setoption name UCI_Elo value {max(1000, min(2800, elo))}")
         skill_level = max(0, min(20, int((elo - 1000) / 70)))
         self._send_command(f"setoption name Skill Level value {skill_level}")
+        self._drain()
         self._send_command("isready")
         self._wait_for("readyok")
 
@@ -104,6 +141,7 @@ class StockfishManager:
         """
         d = depth or self.default_depth
         if self.process:
+            self._drain()
             self._send_command(f"position fen {fen}")
             self._send_command(f"go depth {d}")
             lines = self._wait_for("bestmove", timeout=3.0)
@@ -145,6 +183,7 @@ class StockfishManager:
             self.set_elo(elo)
 
         if self.process:
+            self._drain()
             self._send_command(f"position fen {fen}")
             self._send_command(f"go movetime {movetime_ms}")
             lines = self._wait_for("bestmove", timeout=3.0)

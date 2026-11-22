@@ -59,10 +59,18 @@ export function App() {
   const engineDelayTimer = useRef<number | null>(null);
 
   const clearMoveAnimation = () => {
+    const hadPendingEngineReply = engineDelayTimer.current !== null;
     if (engineDelayTimer.current) window.clearTimeout(engineDelayTimer.current);
     engineDelayTimer.current = null;
     setMoveAnimation(null);
     setIsMoving(false);
+    // A history arrow or reset can cancel the 500 ms delay before Stockfish's
+    // reply is shown. Restore control, otherwise the status stays stuck on
+    // "Stockfish is choosing a reply..." and the board is unplayable.
+    if (hadPendingEngineReply) {
+      setIsPlayerTurn(true);
+      setGameStatus('Reviewing the position — make your move.');
+    }
   };
 
   const showMove = (from: string, to: string) => {
@@ -86,6 +94,13 @@ export function App() {
       return next >= positions.length - 1 ? null : next;
     });
   }, [positions.length]);
+
+  useEffect(
+    () => () => {
+      if (engineDelayTimer.current) window.clearTimeout(engineDelayTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -248,6 +263,7 @@ export function App() {
         // 2) Pause ~0.5 s, then show Stockfish's reply sliding in.
         setGameStatus('Stockfish is choosing a reply...');
         engineDelayTimer.current = window.setTimeout(() => {
+          engineDelayTimer.current = null;
           setIsMoving(false);
           setCurrentFen(res.fen_after);
           showMove(engineUci.slice(0, 2), engineUci.slice(2, 4));

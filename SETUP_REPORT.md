@@ -83,7 +83,12 @@ This document records what was changed to make Pawnder runnable, and the verific
 - `frontend/src/components/ChessBoard.tsx`: only the player's own pieces are draggable while it is their turn. `dragstart` transfers the origin square and immediately reveals that piece's legal destinations; `dragover`/`dragenter` highlight the hovered legal square; `drop` reuses the click-to-move UCI construction (including queen auto-promotion) and calls `onMove`. Drag-end clears selection/highlights. Click-to-move is unchanged.
 - Browser-verified with `bonc_1`: dragging a black knight from `c6` showed its six legal targets, dropping on one fired `/api/practice/move`, Stockfish replied (`Nxd4`), and a subsequent click-to-move still submitted a move. No console errors.
 
-### 11. Model usefulness evidence
+### 11. Stockfish reply hang regression
+- `frontend/src/App.tsx`: `clearMoveAnimation()` now detects a pending 500 ms engine-reply timer, restores `isPlayerTurn`, and replaces the “Stockfish is choosing a reply...” status with a review prompt when that timer is cancelled by ←/→ or reset. The timer handle is cleared when it fires, and a mount-level cleanup cancels any pending timer on unmount.
+- `src/engine/stockfish_manager.py`: engine stdout is drained by a daemon reader thread into a queue, with stale-line draining and bounded `_wait_for()` timeouts, so a stalled `readline()` can no longer wedge `/api/practice/move`.
+- Browser-verified with `bonc_1`: pressing ← while the UI said “Stockfish is choosing a reply...” recovered to review mode, and clicking the same move again from the earlier position submitted a new `/api/practice/move` successfully.
+
+### 12. Model usefulness evidence
 - Added `src/training/evaluate_usefulness.py`: an **offline, chronological 80/20 holdout** for two real users (`bonc_1`: 10 pairs / 51 candidates; `1tshassan`: 19 pairs / 95 candidates). The evaluated model is retrained from the Lichess checkpoint on the earlier 80% only, so no test target is leaked.
 - Added a stable learned-similarity term to `ScenarioNetwork.retrieval_logits`: the GRU query is blended with cosine similarity between the most recent blunder's learned board embedding and each private-bank candidate. Checkpoints remain compatible (no new weights).
 - Result (`metrics_usefulness.json`): same-failure-category drill **97.4%** vs **78.9%** most-recent, **71.3%** random, **71.1%** hand-rule/majority; board similarity to the later real blunder **0.982** vs **0.789** random / **0.860** recent; top-5 target recall **68.9%** vs ~6.9% chance.
@@ -106,6 +111,8 @@ This document records what was changed to make Pawnder runnable, and the verific
 | Evaluation | `python -m src.training.evaluate` | 20-pair **cross-platform** (Lichess model → Chess.com holdout); legality 100 %, inference ~2.6 ms, top-1 retrieval 0.10 (exact-position metric; see usefulness harness below) |
 | Usefulness evaluation | `python -m src.training.evaluate_usefulness` | Chronological 80/20 holdout: category **0.974** vs 0.789 recent / 0.713 random / 0.711 rule; board similarity **0.982** vs 0.789 random; top-5 **0.690**; shuffle control exact top-1 **0.079** |
 | Full DVC pipeline | `dvc repro` (venv activated) | All 6 stages ran; `dvc.lock` regenerated |
+| Engine stress | 20 sequential `get_best_move()` + `evaluate_position()` cycles | OK; worst cycle 0.67 s |
+| Live hang regression | Browser: play move, press ← during 500 ms delay, replay move | Status recovered to review; next move submitted successfully |
 | DVC consistency | `dvc status` | "Data and pipelines are up to date." |
 
 ### Live API smoke test (`http://127.0.0.1:8000`)
