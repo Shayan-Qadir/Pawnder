@@ -54,53 +54,6 @@ stages:
       hash: md5
       md5: c3053dd3849a078dd6f9e2956ae6285c
       size: 37049
-  train:
-    cmd: python -m src.training.train
-    deps:
-    - path: data/candidate_bank/legal_positions.json
-      hash: md5
-      md5: c3053dd3849a078dd6f9e2956ae6285c
-      size: 37049
-    - path: data/raw/bonc_1_games.json
-      hash: md5
-      md5: 72403cd7810ecdb4f678e7578ff8600f
-      size: 988698
-    - path: src/data/chess_com_client.py
-      hash: md5
-      md5: 5a6c9eff577e9f29d276b366e41c3d7f
-      size: 5534
-    - path: src/data/game_parser.py
-      hash: md5
-      md5: 7450a1a92551384096554675ca456768
-      size: 4907
-    - path: src/models/board_encoder.py
-      hash: md5
-      md5: 332c9d21b919de2f54aafd5ae0c0c81e
-      size: 2621
-    - path: src/models/history_gru.py
-      hash: md5
-      md5: 8ee2fd51f52e0a11f49b7a12a3dcd203
-      size: 1256
-    - path: src/models/scenario_network.py
-      hash: md5
-      md5: 9ff7bcbb2c47664e358701082f7902cd
-      size: 2904
-    - path: src/training/dataset.py
-      hash: md5
-      md5: 5ae3b1afbe2b70bea998a494991bff9e
-      size: 10492
-    params:
-      params.yaml:
-        train.batch_size: 8
-        train.embedding_dim: 128
-        train.epochs: 5
-        train.hidden_dim: 256
-        train.lr: 0.001
-    outs:
-    - path: models_saved/scenario_model.pt
-      hash: md5
-      md5: eb1cec692845f74c4bc44b89902a1c8a
-      size: 3773049
   evaluate:
     cmd: python -m src.training.evaluate
     deps:
@@ -116,15 +69,35 @@ stages:
       hash: md5
       md5: 2788709121703abc9d5999326d0bcd9a
       size: 3773177
+    - path: src/data/validation.py
+      hash: md5
+      md5: 2c1e24d866261a8701d052fb9f61859e
+      size: 3745
+    - path: src/models/baseline_knn.py
+      hash: md5
+      md5: 3df27e7e25d566d9277e5c74f9ecdc38
+      size: 2535
+    - path: src/tracking.py
+      hash: md5
+      md5: 956854a1424df503af138bf5721e144a
+      size: 2600
+    - path: src/training/dataset.py
+      hash: md5
+      md5: 72b5feb8f7ea1414647d63fdec4bade8
+      size: 11867
     - path: src/training/evaluate.py
       hash: md5
-      md5: 8bfabb30333d1b100f249bbc7c855090
-      size: 5435
+      md5: 0c856144692067472937b770d06f28fa
+      size: 6033
+    params:
+      params.yaml:
+        data.username: bonc_1
+        extract.max_games: 30
     outs:
     - path: metrics.json
       hash: md5
-      md5: 1fa1fcafd58c5260197be22419d1299d
-      size: 171
+      md5: bb6e890764f0d2da249318ea1908f2de
+      size: 204
   ingest_base:
     cmd: python -m src.data.lichess_base_ingest
     deps:
@@ -209,6 +182,10 @@ stages:
       hash: md5
       md5: eb38104d19f27fb8557db3b24067cdc1
       size: 3278
+    - path: src/data/validation.py
+      hash: md5
+      md5: 2c1e24d866261a8701d052fb9f61859e
+      size: 3745
     - path: src/models/board_encoder.py
       hash: md5
       md5: 332c9d21b919de2f54aafd5ae0c0c81e
@@ -221,6 +198,10 @@ stages:
       hash: md5
       md5: e2a17457c399e392ac9c10acfd109553
       size: 3672
+    - path: src/tracking.py
+      hash: md5
+      md5: 956854a1424df503af138bf5721e144a
+      size: 2600
     - path: src/training/dataset.py
       hash: md5
       md5: 72b5feb8f7ea1414647d63fdec4bade8
@@ -231,8 +212,8 @@ stages:
       size: 8628
     - path: src/training/train_base.py
       hash: md5
-      md5: d4730c929fffe01befdc0c7f00084150
-      size: 2578
+      md5: 2c2c26215e84998a137494d6cb799fdd
+      size: 4054
     params:
       params.yaml:
         train.batch_size: 8
@@ -245,3 +226,55 @@ stages:
       hash: md5
       md5: 2788709121703abc9d5999326d0bcd9a
       size: 3773177
+  evaluate_usefulness:
+    cmd: python -m src.training.evaluate_usefulness
+    deps:
+    - path: data/candidate_bank/users/1tshassan.json
+      hash: md5
+      md5: 5abe292392c49a05b47bc81de09ee3f9
+      size: 43479
+    - path: data/candidate_bank/users/bonc_1.json
+      hash: md5
+      md5: fe92cba1afc24d4ac76d40dcc270f837
+      size: 23507
+    - path: data/raw/1tshassan_games.json
+      hash: md5
+      md5: 331d4c1f66bebe042f984354d8154814
+      size: 45023
+    - path: data/raw/bonc_1_games.json
+      hash: md5
+      md5: 72403cd7810ecdb4f678e7578ff8600f
+      size: 988698
+    - path: models_saved/scenario_model.pt
+      hash: md5
+      md5: 2788709121703abc9d5999326d0bcd9a
+      size: 3773177
+    - path: src/data/validation.py
+      hash: md5
+      md5: 2c1e24d866261a8701d052fb9f61859e
+      size: 3745
+    - path: src/models/scenario_network.py
+      hash: md5
+      md5: e2a17457c399e392ac9c10acfd109553
+      size: 3672
+    - path: src/tracking.py
+      hash: md5
+      md5: 956854a1424df503af138bf5721e144a
+      size: 2600
+    - path: src/training/dataset.py
+      hash: md5
+      md5: 72b5feb8f7ea1414647d63fdec4bade8
+      size: 11867
+    - path: src/training/evaluate_usefulness.py
+      hash: md5
+      md5: 127ab86b8f14ad11be1d1d6e4782a0eb
+      size: 11368
+    - path: src/training/train.py
+      hash: md5
+      md5: 0b3ecb204c30544017162d0f24d969e2
+      size: 8628
+    outs:
+    - path: metrics_usefulness.json
+      hash: md5
+      md5: ad0e81c9791592ab3696614e2585ea51
+      size: 2229

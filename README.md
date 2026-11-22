@@ -128,14 +128,24 @@ destination.
 
 ### 1. Backend & Machine Learning
 ```bash
-# Install Python dependencies
+python -m venv .venv
+# Windows: .venv\Scripts\activate   |   macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 
-# Run pytest test suite (31 automated tests including model gate)
-python -m pytest -v
+# Validate every dataset, then reproduce the registered model + all metrics
+python scripts/reproduce.py
+```
 
-# Train or evaluate scenario model
-python -m src.training.train
+`python scripts/reproduce.py` is the **single command** that validates raw data,
+pulls DVC-versioned data, runs the full DAG (`dvc repro`), exports the MLflow run
+log, and regenerates the documentation figures. Equivalent manual steps:
+
+```bash
+python -m src.data.validation   # schema + FEN legality checks, fails loudly
+dvc pull                        # fetch versioned datasets from DagsHub
+dvc repro                       # ingest -> extract -> train -> evaluate -> usefulness
+python scripts/export_mlflow_runs.py
+python -m pytest -v             # 31 tests including the model quality gate
 ```
 
 ### 2. Start API Server
@@ -161,3 +171,25 @@ docker compose up --build
 - **Web UI:** `http://localhost:3000`
 - **FastAPI Documentation:** `http://localhost:8000/docs`
 - **MLflow Tracking Server:** `http://localhost:5000`
+
+---
+
+## Submission / Evidence Pack
+
+Everything required to verify the ML pipeline is in this repository:
+
+| Requirement | Where to find it |
+|---|---|
+| GitHub repository | https://github.com/Shayan-Qadir/Pawnder |
+| DVC config files | `.dvc/config`, `dvc.yaml`, `dvc.lock`, `params.yaml`, plus `*.dvc` pointers under `data/` |
+| Versioned datasets on DagsHub | https://dagshub.com/Shayan-Qadir/Pawnder (DVC remote: `.../Pawnder.dvc`) |
+| Schema / quality checks | `src/data/validation.py` (run `python -m src.data.validation`) |
+| Leakage-free split + baselines | `src/training/evaluate.py` (kNN baseline logged before model), `src/training/evaluate_usefulness.py` (chronological 80/20 + random/recent/rule/majority) |
+| MLflow runs | `docs/mlflow_export/runs.csv` — 3 FINISHED runs with params, metrics, dataset MD5s and run IDs |
+| Registered model | `docs/mlflow_export/registry.json` — `pawnder-scenario-ranker` version 1 (READY), linked to its training run |
+| One-command reproduction | `python scripts/reproduce.py` |
+| Metrics | `metrics.json`, `metrics_usefulness.json` |
+| Honest interpretation | `MODEL_JUSTIFICATION.md`, `MODEL_EXPLAINED.md` (with `docs/images/*.png`) |
+
+MLflow uses a local SQLite backend (`.venv`-incompatible file store was deprecated in MLflow 3).
+Set `MLFLOW_TRACKING_URI` to a DagsHub URI to mirror runs to the shared server.

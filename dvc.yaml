@@ -71,6 +71,8 @@ stages:
       - src/training/dataset.py
       - src/training/train.py
       - src/training/train_base.py
+      - src/tracking.py
+      - src/data/validation.py
       - src/data/lichess_base_extract.py
       - src/data/game_parser.py
       - data/raw/lichess_base_games.json
@@ -88,10 +90,37 @@ stages:
   evaluate:
     cmd: python -m src.training.evaluate
     deps:
+      - src/data/validation.py
+      - src/tracking.py
       - src/training/evaluate.py
+      - src/models/baseline_knn.py
+      - src/training/dataset.py
       - models_saved/scenario_model.pt
       - data/candidate_bank/legal_positions.json
       - data/raw/bonc_1_games.json
+    params:
+      - data.username
+      - extract.max_games
     metrics:
       - metrics.json:
+          cache: false
+
+  # Offline usefulness harness: chronological holdout + baselines, logged to
+  # MLflow. Depends on versioned demo-user datasets so a fresh clone can run it.
+  evaluate_usefulness:
+    cmd: python -m src.training.evaluate_usefulness
+    deps:
+      - src/tracking.py
+      - src/data/validation.py
+      - src/training/evaluate_usefulness.py
+      - src/training/train.py
+      - src/training/dataset.py
+      - src/models/scenario_network.py
+      - models_saved/scenario_model.pt
+      - data/raw/bonc_1_games.json
+      - data/raw/1tshassan_games.json
+      - data/candidate_bank/users/bonc_1.json
+      - data/candidate_bank/users/1tshassan.json
+    outs:
+      - metrics_usefulness.json:
           cache: false

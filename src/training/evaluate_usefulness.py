@@ -238,6 +238,9 @@ def main() -> None:
         print("No evaluation data available")
         return
 
+    from src.tracking import start_run, log_params, log_metrics, log_artifact
+    global_ckpt = MODELS_DIR / "scenario_model.pt"
+
     keys = [
         "private_top1", "global_top1", "random_top1", "recent_top1", "rule_top1",
         "private_top5", "private_category", "private_category_top5",
@@ -252,6 +255,15 @@ def main() -> None:
     }
     overall["users"] = list(per_user)
     overall["per_user"] = per_user
+    with start_run("evaluate_usefulness", tags={"stage": "evaluate_usefulness", "dataset": "chess_com_holdout"}) as _:
+        import hashlib
+        log_params({
+            "users": list(per_user),
+            "checkpoint_md5": hashlib.md5(global_ckpt.read_bytes()).hexdigest() if global_ckpt.exists() else "none",
+            "split": "chronological_80_20",
+            "seed": SEED,
+        })
+        log_metrics(overall)
     Path("metrics_usefulness.json").write_text(
         json.dumps(overall, indent=2), encoding="utf-8"
     )

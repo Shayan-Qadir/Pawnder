@@ -18,6 +18,10 @@ COPY data/ ./data/
 COPY models_saved/ ./models_saved/
 COPY params.yaml .
 COPY pytest.ini .
+# DVC pipeline files so `dvc repro` also works inside the container
+COPY dvc.yaml dvc.lock .dvcignore ./
+COPY .dvc/ ./.dvc/
+COPY scripts/ ./scripts/
 
 ENV STOCKFISH_PATH=/usr/games/stockfish
 ENV PYTHONUNBUFFERED=1

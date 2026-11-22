@@ -7,7 +7,8 @@ This document records what was changed to make Pawnder runnable, and the verific
 - Python **3.12.10** virtual environment at `.venv` (system default is 3.14, which lacks wheels for some dependencies).
 - Node 20 / npm 11; frontend dependencies installed; `npm run build` passes.
 - **Stockfish 19** (windows x86-64 universal) downloaded from the official GitHub release into `bin/stockfish.exe` (~103 MB, ignored by Git).
-- DVC 3.67 installed in the venv. DagsHub remote is configured but authentication was not available; the full pipeline was therefore reproduced locally and `dvc.lock` regenerated (no `dvc push`).
+- DVC 3.67 installed in the venv. DagsHub remote configured and authentication granted; `dvc push` completed successfully (demo-user datasets + model checkpoint published to the remote).
+- MLflow 3.18 tracking with a local SQLite backend; 3 runs logged and exported to `docs/mlflow_export/`, including a registered `pawnder-scenario-ranker` v1 model.
 - Live backend and frontend servers are running locally at `http://127.0.0.1:8000` and `http://127.0.0.1:3000`.
 
 ## Code changes
@@ -123,9 +124,9 @@ This document records what was changed to make Pawnder runnable, and the verific
 ### Not verified
 
 - **Docker**: the daemon is not running in this environment (`failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`). Configuration fixes are applied; run `docker compose up --build` on a machine with Docker Desktop running.
-- **`dvc push` / `dvc pull`**: not run in this pass. DagsHub login is now available; run `dvc push` to publish the regenerated artifacts.
+- **`dvc pull` into a clean clone**: `dvc push` succeeded; `dvc pull` is exercised by `python scripts/reproduce.py` on a machine with the DagsHub remote configured.
 
 ## Current state
 
-- Working tree contains uncommitted changes; nothing has been committed or pushed.
+- All changes are committed and pushed to `origin/main`; DVC artifacts are published to the DagsHub remote.
 - `.venv/`, `bin/`, and generated artifacts are ignored by Git; `models_saved/.gitkeep` is tracked so Docker builds work from a fresh clone.

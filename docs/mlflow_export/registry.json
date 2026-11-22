@@ -1,0 +1,15 @@
+{
+  "registered_models": [
+    {
+      "name": "pawnder-scenario-ranker",
+      "versions": [
+        {
+          "version": 1,
+          "source": "file://C:/Users/abdul/OneDrive/Desktop/dev/Pawnder/models_saved/scenario_model.pt",
+          "run_id": "f401ba91994748c4993fddf4c35c90e0",
+          "status": "READY"
+        }
+      ]
+    }
+  ]
+}

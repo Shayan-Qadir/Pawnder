@@ -45,7 +45,7 @@
       "permutation_top1": 0.0,
       "permutation_category": 1.0,
       "private_train_final_loss": 3.471,
-      "avg_inference_latency_ms": 2.26,
+      "avg_inference_latency_ms": 1.93,
       "test_pairs": 10,
       "bank_size": 51
     },
@@ -70,7 +70,7 @@
       "permutation_top1": 0.1579,
       "permutation_category": 0.5263,
       "private_train_final_loss": 3.4975,
-      "avg_inference_latency_ms": 2.14,
+      "avg_inference_latency_ms": 2.25,
       "test_pairs": 19,
       "bank_size": 95
     }

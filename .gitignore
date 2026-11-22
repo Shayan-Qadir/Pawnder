@@ -40,10 +40,14 @@ mlruns/
 mlflow_artifacts/
 .dvc/cache
 
-# Per-user runtime artifacts (generated on import; never commit player data)
-data/candidate_bank/users/
+# Per-user runtime artifacts (generated on import; never commit player data).
+# Exception: demo user datasets are versioned with DVC for reproducible eval.
+data/candidate_bank/users/*
+!data/candidate_bank/users/*.dvc
 data/processed/user_profiles/
 data/raw/*_games.json
+!data/raw/bonc_1_games.json.dvc
+!data/raw/1tshassan_games.json.dvc
 models_saved/users/
 
 # Local runtime setup
@@ -91,8 +95,12 @@ mlruns/
 mlflow_artifacts/
 .dvc/cache
 
-# Per-user runtime artifacts (generated on import; never commit player data)
-data/candidate_bank/users/
+# Per-user runtime artifacts (generated on import; never commit player data).
+# Exception: demo user datasets are versioned with DVC for reproducible eval.
+data/candidate_bank/users/*
+!data/candidate_bank/users/*.dvc
 data/processed/user_profiles/
 data/raw/*_games.json
+!data/raw/bonc_1_games.json.dvc
+!data/raw/1tshassan_games.json.dvc
 models_saved/users/

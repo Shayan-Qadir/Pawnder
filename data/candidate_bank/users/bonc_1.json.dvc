@@ -1,0 +1,5 @@
+outs:
+- md5: fe92cba1afc24d4ac76d40dcc270f837
+  size: 23507
+  hash: md5
+  path: bonc_1.json
