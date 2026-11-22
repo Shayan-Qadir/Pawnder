@@ -123,14 +123,14 @@ the player's later real blunder. The simple methods were around 71–79%.
 
 ![Board similarity comparison](docs/images/similarity_comparison.png)
 
-Similarity **0.984** for the model vs **0.865** for random. Think of 1.0 as
+Similarity **0.982** for the model vs **0.789** for random. Think of 1.0 as
 “almost the same board shape”.
 
 ### Was the real answer somewhere in its top 5?
 
 ![Top-5 comparison](docs/images/top5_comparison.png)
 
-**58.9%** versus about **7.5%** chance.
+**68.9%** versus about **6.9%** chance.
 
 ---
 

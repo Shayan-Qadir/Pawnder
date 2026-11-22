@@ -37,6 +37,10 @@ def train_scenario_model(
     never overwrites the global demo bank. ``init_from`` optionally fine-tunes
     an existing checkpoint instead of starting from random weights.
     """
+    # Deterministic initialisation/shuffling so dvc repro reproduces the
+    # committed checkpoint and the documented offline metrics.
+    torch.manual_seed(42)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     bank_mgr = bank_mgr or CandidateBankManager()
@@ -59,18 +63,14 @@ def train_scenario_model(
 
     model = model.to(device)
 
-    # Freeze the board encoder so the precomputed candidate embeddings and the
-    # history encoding always use the same weights. Letting it move mid-training
-    # made retrieval learn against stale vectors.
-    for param in model.board_encoder.parameters():
-        param.requires_grad_(False)
-    model.board_encoder.eval()
-
-    # Precompute candidate embeddings once for the frozen encoder.
-    candidate_embeddings = bank_mgr.compute_embeddings(model.board_encoder, device=str(device))
-    candidate_embeddings = candidate_embeddings.to(device)
-
-    dataset = HistoryScenarioDataset(train_samples, board_encoder=model.board_encoder)
+    # The board encoder MUST stay trainable. The ranking score is dominated by
+    # board similarity (history_similarity_weight=10), so a frozen encoder
+    # leaves that signal at random-init noise and every FEN looks identical.
+    # Recompute candidate embeddings each epoch so they track the encoder as
+    # it learns instead of going stale.
+    dataset = HistoryScenarioDataset(
+        train_samples, board_encoder=model.board_encoder, trainable=True
+    )
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     criterion_ce = nn.CrossEntropyLoss()
@@ -81,7 +81,6 @@ def train_scenario_model(
 
     for epoch in range(epochs):
         model.train()
-        model.board_encoder.eval()  # frozen encoder: keep BN in inference mode
 
         epoch_loss = 0.0
         for batch in dataloader:
@@ -91,7 +90,12 @@ def train_scenario_model(
             target_rating = batch["target_rating_band"].to(device)
 
             optimizer.zero_grad()
-            outputs = model(history, candidate_embeddings)
+            # Fresh graph per batch so the encoder can learn from retrieval
+            # without reusing a freed autograd graph across batches.
+            batch_embeddings = bank_mgr.compute_embeddings(
+                model.board_encoder, device=str(device), trainable=True
+            ).to(device)
+            outputs = model(history, batch_embeddings)
 
             loss_retrieval = criterion_ce(outputs["retrieval_logits"], target_cand)
             loss_clock = criterion_ce(outputs["clock_logits"], target_clock)

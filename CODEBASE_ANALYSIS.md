@@ -48,7 +48,7 @@ Everything else (parsing, clock regex, centipawn math, bucket boundaries, UCI co
 > move replay, a vertical evaluation bar, drag-and-drop or click-to-move,
 > Enter-to-import, and loading indicators for import, generation, and move submission.
 > See `SETUP_REPORT.md` and `RUNBOOK.md` for the
-> current state. Exact next-FEN prediction remains weak (0.05–0 top-1), so the
+> current state. Exact next-FEN prediction remains weak (0.10–0 top-1), so the
 > final evaluation reframes the task honestly as **useful drill selection**: on a
 > chronological 80/20 holdout over two users, the learned ranker matches the
 > failure category of later real blunders 97.4% of the time vs 71–79% for
@@ -597,8 +597,8 @@ Sections 1–10 are the original analysis; the following supersedes the model-sp
 | Metric | Private ranker | Recent | Random | Hand rule / majority | Global base |
 |---|---:|---:|---:|---:|---:|
 | Same-failure-category drill | **0.974** | 0.789 | 0.713 | 0.711 | **0.974** |
-| Board similarity to later real blunder | **0.984** | 0.924 | 0.865 | 0.940 | — |
-| Actual later blunder in top 5 | **0.589** | — | ~0.075 chance | — | — |
+| Board similarity to later real blunder | **0.982** | 0.860 | 0.789 | 0.646 | — |
+| Actual later blunder in top 5 | **0.690** | — | ~0.069 chance | — | — |
 
 Evaluated on `bonc_1` (10 test pairs / 51 candidates) and `1tshassan` (19 / 95), with an **80/20 chronological split** and the evaluated model fine-tuned only on the older 80%. A label-shuffle control collapses exact top-1 to 0.079 (random: 0.076).
 

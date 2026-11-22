@@ -50,13 +50,13 @@ The offline comparison makes the difference concrete:
 
 | Method | Same-failure-category drill | Board similarity to later real blunder |
 |---|---:|---:|
-| **Pawnder ranker (private model)** | **97.4%** | **0.984** |
-| Most-recent scenario | 78.9% | 0.924 |
-| Random from private bank | 71.3% | 0.865 |
-| Clock/rating hand rule | 71.1% | 0.940 |
+| **Pawnder ranker (private model)** | **97.4%** | **0.982** |
+| Most-recent scenario | 78.9% | 0.860 |
+| Random from private bank | 71.3% | 0.789 |
+| Clock/rating hand rule | 71.1% | 0.646 |
 | Always the majority category | 71.1% | — |
 
-The ranker also put the actual later blunder in its top 5 **58.9%** of the time, versus a ~7.5% chance level for a 5-of-50…95 shortlist.
+The ranker also put the actual later blunder in its top 5 **68.9%** of the time, versus a ~6.9% chance level for a 5-of-50…95 shortlist.
 
 ---
 
@@ -81,4 +81,4 @@ The ranker also put the actual later blunder in its top 5 **58.9%** of the time,
 
 ## 5. One-paragraph version for a presentation
 
-Pawnder turns a user's Chess.com blunders into a private drill bank. A CNN trained on Lichess encodes every position, and a history network scores those positions against the user's recent mistakes; the API then serves one of them as a legal Stockfish practice position. We validated this on a chronological 80/20 split over two real users: the ranker picked a drill from the same failure category as the player's later real blunders 97% of the time, compared with 71–79% for random, most-recent, and clock/rating rules, and its selected positions were far more visually similar to the later blunder (0.984 vs 0.865 random). A label-shuffle control collapses exact prediction to chance. That is our evidence that the ML component is doing useful work; we deliberately do not claim a rating improvement because no A/B/longitudinal test was run.
+Pawnder turns a user's Chess.com blunders into a private drill bank. A CNN trained on Lichess encodes every position, and a history network scores those positions against the user's recent mistakes; the API then serves one of them as a legal Stockfish practice position. We validated this on a chronological 80/20 split over two real users: the ranker picked a drill from the same failure category as the player's later real blunders 97% of the time, compared with 71–79% for random, most-recent, and clock/rating rules, and its selected positions were far more visually similar to the later blunder (0.982 vs 0.789 random). A label-shuffle control collapses exact prediction to chance. That is our evidence that the ML component is doing useful work; we deliberately do not claim a rating improvement because no A/B/longitudinal test was run.

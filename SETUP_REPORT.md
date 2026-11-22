@@ -85,7 +85,7 @@ This document records what was changed to make Pawnder runnable, and the verific
 ### 11. Model usefulness evidence
 - Added `src/training/evaluate_usefulness.py`: an **offline, chronological 80/20 holdout** for two real users (`bonc_1`: 10 pairs / 51 candidates; `1tshassan`: 19 pairs / 95 candidates). The evaluated model is retrained from the Lichess checkpoint on the earlier 80% only, so no test target is leaked.
 - Added a stable learned-similarity term to `ScenarioNetwork.retrieval_logits`: the GRU query is blended with cosine similarity between the most recent blunder's learned board embedding and each private-bank candidate. Checkpoints remain compatible (no new weights).
-- Result (`metrics_usefulness.json`): same-failure-category drill **97.4%** vs **78.9%** most-recent, **71.3%** random, **71.1%** hand-rule/majority; board similarity to the later real blunder **0.984** vs **0.865** random / **0.924** recent; top-5 target recall **58.9%** vs ~7.5% chance.
+- Result (`metrics_usefulness.json`): same-failure-category drill **97.4%** vs **78.9%** most-recent, **71.3%** random, **71.1%** hand-rule/majority; board similarity to the later real blunder **0.982** vs **0.789** random / **0.860** recent; top-5 target recall **68.9%** vs ~6.9% chance.
 - Negative control: shuffling history/target alignment collapses exact-next-FEN accuracy to **7.9%** (random: 7.6%). The category control stays high because the banks are category-imbalanced; this is documented as a limitation.
 - Full narrative, including what the evidence does **not** prove, is in [`MODEL_JUSTIFICATION.md`](MODEL_JUSTIFICATION.md).
 
@@ -102,8 +102,8 @@ This document records what was changed to make Pawnder runnable, and the verific
 | Lichess base extraction | `python -m src.data.lichess_base_extract` | **85 base scenarios**, all `owner=__base__`, `_platform=lichess` |
 | Base pretraining | `python -m src.training.train_base` | 5 epochs, 72 chronological pairs, final loss ≈ 5.34; checkpoint tagged `base_dataset=lichess` |
 | Chess.com extraction | `python -m src.data.blunder_detector` | 98 unique scenarios from 30 games |
-| Evaluation | `python -m src.training.evaluate` | 20-pair **cross-platform** (Lichess model → Chess.com holdout); legality 100 %, inference ~2.6 ms, top-1 retrieval 0.05 (exact-position metric; see usefulness harness below) |
-| Usefulness evaluation | `python -m src.training.evaluate_usefulness` | Chronological 80/20 holdout: category **0.974** vs 0.789 recent / 0.713 random / 0.711 rule; board similarity **0.984** vs 0.865 random; top-5 **0.589**; shuffle control exact top-1 **0.079** |
+| Evaluation | `python -m src.training.evaluate` | 20-pair **cross-platform** (Lichess model → Chess.com holdout); legality 100 %, inference ~2.6 ms, top-1 retrieval 0.10 (exact-position metric; see usefulness harness below) |
+| Usefulness evaluation | `python -m src.training.evaluate_usefulness` | Chronological 80/20 holdout: category **0.974** vs 0.789 recent / 0.713 random / 0.711 rule; board similarity **0.982** vs 0.789 random; top-5 **0.690**; shuffle control exact top-1 **0.079** |
 | Full DVC pipeline | `dvc repro` (venv activated) | All 6 stages ran; `dvc.lock` regenerated |
 | DVC consistency | `dvc status` | "Data and pipelines are up to date." |
 

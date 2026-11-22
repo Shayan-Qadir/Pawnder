@@ -52,9 +52,16 @@ class CandidateBankManager:
         return self.candidates
 
     def compute_embeddings(
-        self, board_encoder: CompactBoardCNN, device: str = "cpu"
+        self,
+        board_encoder: CompactBoardCNN,
+        device: str = "cpu",
+        trainable: bool = False,
     ) -> torch.Tensor:
-        """Precomputes CNN board embeddings for all candidates in bank."""
+        """Precomputes CNN board embeddings for all candidates in bank.
+
+        ``trainable=True`` keeps the autograd graph so the encoder can learn
+        from the retrieval loss. Inference callers keep the default no-grad path.
+        """
         if not self.candidates:
             self.load_candidates()
 
@@ -78,10 +85,12 @@ class CandidateBankManager:
             tensors.append(t)
 
         batch_tensors = torch.stack(tensors).to(device)
-        with torch.no_grad():
+        if trainable:
             self.embeddings = board_encoder(batch_tensors).cpu()
-
-        torch.save(self.embeddings, self.embeddings_path)
+        else:
+            with torch.no_grad():
+                self.embeddings = board_encoder(batch_tensors).cpu()
+            torch.save(self.embeddings, self.embeddings_path)
         return self.embeddings
 
     def get_embeddings(self) -> torch.Tensor:
@@ -104,9 +113,11 @@ class HistoryScenarioDataset(Dataset):
         samples: list[dict[str, Any]],
         board_encoder: Optional[CompactBoardCNN] = None,
         max_seq_len: int = 5,
+        trainable: bool = False,
     ):
         self.samples = samples
         self.max_seq_len = max_seq_len
+        self.trainable = trainable
         self.board_encoder = board_encoder or CompactBoardCNN()
         self.board_encoder.eval()
 
@@ -118,7 +129,7 @@ class HistoryScenarioDataset(Dataset):
 
     def _encode_step(self, step_info: dict[str, Any]) -> torch.Tensor:
         """Encodes single history step: (128-d board + 3 context features)."""
-        return encode_step(step_info, self.board_encoder)
+        return encode_step(step_info, self.board_encoder, trainable=self.trainable)
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         item = self.samples[idx]
@@ -154,12 +165,17 @@ class HistoryScenarioDataset(Dataset):
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
-def encode_step(step_info: dict[str, Any], encoder: CompactBoardCNN) -> torch.Tensor:
+def encode_step(
+    step_info: dict[str, Any], encoder: CompactBoardCNN, trainable: bool = False
+) -> torch.Tensor:
     """Encode one history step as 128-d board embedding + 3 context features."""
     fen = step_info.get("fen", START_FEN)
     board_t = fen_to_tensor(fen).unsqueeze(0)
-    with torch.no_grad():
+    if trainable:
         board_emb = encoder(board_t).squeeze(0)
+    else:
+        with torch.no_grad():
+            board_emb = encoder(board_t).squeeze(0)
 
     clock = float(step_info.get("clock_remaining", 300.0))
     clock_ratio = min(1.0, max(0.0, clock / 600.0))

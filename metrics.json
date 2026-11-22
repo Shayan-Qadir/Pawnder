@@ -1,7 +1,7 @@
 {
   "samples_evaluated": 20,
-  "scenario_top1_accuracy": 0.05,
+  "scenario_top1_accuracy": 0.1,
   "clock_bucket_accuracy": 1.0,
-  "avg_inference_latency_ms": 2.63,
+  "avg_inference_latency_ms": 2.38,
   "legality_guarantee_pct": 100.0
 }

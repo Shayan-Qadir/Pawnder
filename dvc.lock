@@ -114,7 +114,7 @@ stages:
       size: 988698
     - path: models_saved/scenario_model.pt
       hash: md5
-      md5: c08b3c51f013e84605778d6d1ee11789
+      md5: 2788709121703abc9d5999326d0bcd9a
       size: 3773177
     - path: src/training/evaluate.py
       hash: md5
@@ -123,8 +123,8 @@ stages:
     outs:
     - path: metrics.json
       hash: md5
-      md5: 185a6e784bb8c7ea25bc302863a08fc4
-      size: 172
+      md5: 1fa1fcafd58c5260197be22419d1299d
+      size: 171
   ingest_base:
     cmd: python -m src.data.lichess_base_ingest
     deps:
@@ -219,20 +219,20 @@ stages:
       size: 1256
     - path: src/models/scenario_network.py
       hash: md5
-      md5: 9ff7bcbb2c47664e358701082f7902cd
-      size: 2904
+      md5: e2a17457c399e392ac9c10acfd109553
+      size: 3672
     - path: src/training/dataset.py
       hash: md5
-      md5: 2f79707e9265896a4c017f5927b56f6e
-      size: 11311
+      md5: 72b5feb8f7ea1414647d63fdec4bade8
+      size: 11867
     - path: src/training/train.py
       hash: md5
-      md5: 72433a42536b8594586ea202162e89c9
-      size: 7946
+      md5: 0b3ecb204c30544017162d0f24d969e2
+      size: 8628
     - path: src/training/train_base.py
       hash: md5
-      md5: aaa523406d07257c1c430098302c0b40
-      size: 2510
+      md5: d4730c929fffe01befdc0c7f00084150
+      size: 2578
     params:
       params.yaml:
         train.batch_size: 8
@@ -243,5 +243,5 @@ stages:
     outs:
     - path: models_saved/scenario_model.pt
       hash: md5
-      md5: c08b3c51f013e84605778d6d1ee11789
+      md5: 2788709121703abc9d5999326d0bcd9a
       size: 3773177
