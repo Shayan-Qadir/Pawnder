@@ -4,9 +4,9 @@
       "name": "pawnder-scenario-ranker",
       "versions": [
         {
-          "version": 1,
-          "source": "file://C:/Users/abdul/OneDrive/Desktop/dev/Pawnder/models_saved/scenario_model.pt",
-          "run_id": "f401ba91994748c4993fddf4c35c90e0",
+          "version": "2",
+          "source": "mlflow-artifacts:/3ff0c0bba82b48e2b265af6924da380a/5650d6fd9b3540959e3e4a4a54db0df7/artifacts/scenario_model.pt",
+          "run_id": "5650d6fd9b3540959e3e4a4a54db0df7",
           "status": "READY"
         }
       ]

@@ -1,0 +1,27 @@
+# Keep the build context small and never ship local credentials.
+.git
+.gitignore
+.venv
+venv
+node_modules
+frontend/node_modules
+frontend/dist
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.coverage
+*.log
+
+# Local binaries and secrets (DagsHub token lives in config.local)
+bin/
+.dvc/config.local
+.dvc/cache
+mlflow.db
+mlruns/
+mlflow_artifacts/
+mlflow_export_tmp/
+
+# OS noise
+.DS_Store
+Thumbs.db

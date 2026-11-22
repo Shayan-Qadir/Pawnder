@@ -121,10 +121,18 @@ This document records what was changed to make Pawnder runnable, and the verific
 | `POST /api/practice/move` | Legal move, engine reply `e7e5`, `evaluation_cp ≈ 32`, `result: null` while in progress |
 | `GET /api/practice/sessions` | `{"sessions":[]}` |
 
-### Not verified
+### Docker verification (this pass)
 
-- **Docker**: the daemon is not running in this environment (`failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`). Configuration fixes are applied; run `docker compose up --build` on a machine with Docker Desktop running.
-- **`dvc pull` into a clean clone**: `dvc push` succeeded; `dvc pull` is exercised by `python scripts/reproduce.py` on a machine with the DagsHub remote configured.
+Docker Engine **is** running (`docker version` reports 29.8.2 / Docker Desktop 4.95). `docker compose config` passes. Image builds were attempted but blocked by this machine's container networking, not by Dockerfile syntax:
+
+- `python:3.11-slim` → `apt-get update` could not resolve `deb.debian.org` inside the container, so `stockfish`/`curl` could not be installed.
+- `node:20-slim` → `npm ci` failed with `ECONNRESET` after ~12 minutes; retries and a cache mount were added, and `--network=host` was attempted.
+
+Fixes applied: `.dockerignore` keeps `.venv`, `node_modules`, `bin/` and `.dvc/config.local` out of the build context; `npm ci` now uses `package-lock.json`, retries, and a BuildKit cache mount; `docker-compose.yml` persists the MLflow SQLite DB and no longer emits the obsolete `version` warning. On a machine with normal container DNS, `docker compose up --build` is the intended full-stack command. The repository also satisfies the "script **or** Dockerfile" requirement via the verified `python scripts/reproduce.py` path.
+
+### Hosted MLflow
+
+`python scripts/log_to_dagshub.py` re-runs the ML stages against DagsHub MLflow and refreshes `docs/mlflow_export/`. It reuses the DVC remote token automatically (username is derived from the token, which fixed an initial 403). Hosted experiment `pawnder-scenario-ranker` now contains 3 FINISHED runs; one failed attempt is retained for transparency. Registered model `pawnder-scenario-ranker` v2 is READY and points at the checkpoint uploaded to the training run's artifact store, not a local `file://` path. Intermittent DagsHub SSL/DNS drops required a retry wrapper around each stage.
 
 ## Current state
 

@@ -172,6 +172,12 @@ docker compose up --build
 - **FastAPI Documentation:** `http://localhost:8000/docs`
 - **MLflow Tracking Server:** `http://localhost:5000`
 
+The Compose file persists the MLflow SQLite DB in a named volume. If the build
+machine cannot resolve package registries from inside containers, use
+`docker build --network=host ...` (this machine hit container DNS/npm network
+failures; see `SETUP_REPORT.md`). The verified one-command path is
+`python scripts/reproduce.py`.
+
 ---
 
 ## Submission / Evidence Pack
@@ -185,11 +191,12 @@ Everything required to verify the ML pipeline is in this repository:
 | Versioned datasets on DagsHub | https://dagshub.com/Shayan-Qadir/Pawnder (DVC remote: `.../Pawnder.dvc`) |
 | Schema / quality checks | `src/data/validation.py` (run `python -m src.data.validation`) |
 | Leakage-free split + baselines | `src/training/evaluate.py` (kNN baseline logged before model), `src/training/evaluate_usefulness.py` (chronological 80/20 + random/recent/rule/majority) |
-| MLflow runs | `docs/mlflow_export/runs.csv` — 3 FINISHED runs with params, metrics, dataset MD5s and run IDs |
-| Registered model | `docs/mlflow_export/registry.json` — `pawnder-scenario-ranker` version 1 (READY), linked to its training run |
-| One-command reproduction | `python scripts/reproduce.py` |
+| MLflow runs | `docs/mlflow_export/runs.csv` — 3 FINISHED hosted runs with params, metrics, dataset MD5s and run IDs; UI: https://dagshub.com/Shayan-Qadir/Pawnder.mlflow |
+| Registered model | `docs/mlflow_export/registry.json` — `pawnder-scenario-ranker` version 2 (READY), linked to its training run and artifact store |
+| One-command reproduction | `python scripts/reproduce.py` (local) · `python scripts/log_to_dagshub.py` (hosted MLflow) |
 | Metrics | `metrics.json`, `metrics_usefulness.json` |
 | Honest interpretation | `MODEL_JUSTIFICATION.md`, `MODEL_EXPLAINED.md` (with `docs/images/*.png`) |
 
-MLflow uses a local SQLite backend (`.venv`-incompatible file store was deprecated in MLflow 3).
-Set `MLFLOW_TRACKING_URI` to a DagsHub URI to mirror runs to the shared server.
+MLflow uses a local SQLite backend by default (the MLflow 3 file store is deprecated).
+`python scripts/log_to_dagshub.py` logs to the hosted DagsHub server and reuses the
+DVC remote token automatically — no token needs to be typed or committed.

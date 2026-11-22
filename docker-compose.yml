@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -9,6 +7,7 @@ services:
       - "8000:8000"
     environment:
       - STOCKFISH_PATH=/usr/games/stockfish
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     volumes:
       - ./data:/app/data
       - ./models_saved:/app/models_saved
@@ -31,9 +30,11 @@ services:
     image: ghcr.io/mlflow/mlflow:latest
     ports:
       - "5000:5000"
-    command: mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlflow_artifacts --host 0.0.0.0
+    command: mlflow server --backend-store-uri sqlite:////mlflow/mlflow.db --default-artifact-root /mlflow_artifacts --host 0.0.0.0 --port 5000
     volumes:
       - mlflow_data:/mlflow_artifacts
+      - mlflow_db:/mlflow
 
 volumes:
   mlflow_data:
+  mlflow_db:
