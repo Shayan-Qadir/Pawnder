@@ -182,7 +182,7 @@ failures; see `SETUP_REPORT.md`). The verified one-command path is
 
 ## Submission / Evidence Pack
 
-Everything required to verify the ML pipeline is in this repository:
+Everything required to verify the ML pipeline is in this repository. A paste-ready GCR submission checklist is in [`GCR_SUBMISSION.md`](GCR_SUBMISSION.md).
 
 | Requirement | Where to find it |
 |---|---|
